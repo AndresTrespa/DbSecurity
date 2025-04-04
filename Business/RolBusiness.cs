@@ -20,7 +20,7 @@ namespace Business
             _logger = logger;
         }
         // Método para obtener todos los roles como DTOs
-        public async Task<IEnumerable<RolDto>> GetRolByIdAsync()
+        public async Task<IEnumerable<RolDto>> GetRolAllAsync()
         {
             try
             {
@@ -46,7 +46,7 @@ namespace Business
 
             try
             {
-                var rol = await _rolData.GetbyIdAsync(id);
+                var rol = await _rolData.GetByIdAsync(id);
                 if (rol == null)
                 {
                     _logger.LogInformation("No se encontró ningún rol con ID: {RolId}", id);

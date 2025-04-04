@@ -20,17 +20,8 @@ namespace Business
             try
             {
                 var personas = await _personaData.GetAllPersonasAsync();
-                var PersonDTO = new List<PersonDTO>();
-
-                foreach (var persona in personas)
-                    PersonDTO.Add(new PersonDTO
-                    {
-                        Id = persona.Id,
-                        Name = persona.Name,
-                        Email = persona.Email,
-                        PhoneNumber = persona.PhoneNumber
-                    });
-                return PersonDTO;
+                var PersonDTO = MapToList(personas);
+                return PersonDTO;  
             }
             catch (Exception ex)
             {
@@ -43,10 +34,9 @@ namespace Business
         {
             if (id <= 0)
             {
-                _logger.LogWarning("Se intentó obtener un persona con ID inválido: {personaId}", id);
+                _logger.LogWarning("Se intentó obtener un persona con ID inválido: {PersonaId}", id);
                 throw new Utilities.Exeptions.ValidationException("id", "El ID del persona debe ser mayor que cero");
             }
-
             try
             {
                 var persona = await _personaData.GetPersonaAsync(id);
@@ -82,10 +72,11 @@ namespace Business
                 {
                     Name = PersonDTO.Name,
                     Email = PersonDTO.Email, // Si existe en la entidad
-                    PhoneNumber = PersonDTO.PhoneNumber
+                    PhoneNumber = PersonDTO.PhoneNumber,
+
                 };
 
-                var personaCreado = await _personaData.CreatePersonAsync(persona);
+                var personaCreado = await _personaData.CreateAsync(persona);
 
                 return new PersonDTO
                 {

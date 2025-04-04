@@ -1,7 +1,6 @@
 using Business;
 using Data;
 using Entity.Context;
-using Entity.Model;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,9 +11,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<Rol>();
-builder.Services.AddScoped<RolBusiness>();
 builder.Services.AddScoped<RolData>();
+builder.Services.AddScoped<RolBusiness>();
+
+builder.Services.AddScoped<PersonaData>();
+builder.Services.AddScoped<PersonBusiness>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(opciones => opciones.UseSqlServer("name=DefaultConnection"));
 

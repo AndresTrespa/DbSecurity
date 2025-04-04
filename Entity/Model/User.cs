@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Entity.Model
+﻿namespace Entity.Model
 {
     public class User
     {
@@ -12,7 +6,7 @@ namespace Entity.Model
         public string UserName { get; set; }
         public string ProfilePhotoUrl { get; set; }
         public string Active { get; set; }
-        public virtual Persona Persona { get; set; }
-     
+        //public Persona persona { get; set; }
+
     }
 }

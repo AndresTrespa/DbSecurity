@@ -12,9 +12,9 @@ namespace Entity.Model
         public string Name { get; set; }
         public string code { get; set; }
         public DateTime CreatAt { get; set; }
-        public bool DeleteAt { get; set; }
-        public virtual ICollection<RolUser> RolUser { get; set; }
-        public virtual ICollection<RolFormPermission> RolFormPermission { get; set; }
+        public DateTime? DeleteAt { get; set; }
+        //public virtual ICollection<RolUser> RolUser { get; set; }
+        //public virtual ICollection<RolFormPermission> RolFormPermission { get; set; }
 
     }
 }

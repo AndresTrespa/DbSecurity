@@ -1,13 +1,12 @@
 ﻿using Business;
-using Data;
 using Entity.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Utilities.Exeptions;
 
 namespace Web.Controllers
 {
-    public class PersonasController
-    {
+    
+
         [Route("api/[controller]")]
         [ApiController]
         [Produces("application/json")]
@@ -92,5 +91,5 @@ namespace Web.Controllers
             }
 
         }
-    }
+    
 }

@@ -25,7 +25,7 @@ namespace Data
 
             try
             {
-                string query = @"SELECT * FROM Rol WHERE IsDeleted = 0;";
+                string query = @"SELECT * FROM RolSet WHERE DeleteAt = 0;";
                 return await _context.QueryAsync<Rol>(query);
             }
             catch (Exception ex)
@@ -38,12 +38,12 @@ namespace Data
         }
 
 
-        //Metodo para traer por id SQL
+        //Metodo para traer por id Del SQL
         public async Task<Rol?> GetByIdAsync(int id)
         {
             try
             {
-                string query = @"SELECT * FROM Rol WHERE Id = @Id AND IsDeleted = 0;";
+                string query = @"SELECT * FROM RolSet WHERE Id = @Id;";
                 return await _context.QueryFirstOrDefaultAsync<Rol>(query, new { Id = id });
             }
             catch (Exception ex)
@@ -61,17 +61,17 @@ namespace Data
             try
             {
                 string query = @"
-               INSERT INTO Rol (Name, code, IsDeleted, CreateAt, DeleteAt) 
+               INSERT INTO RolSet (Name, code, DeleteAt, CreateAt, Active) 
                OUTPUT INSERTED.Id 
-               VALUES (@Name, @code, @IsDeleted, @CreateAt,@DeleteAt);";
+               VALUES (@Name, @code, @DeleteAt, @CreateAt,@Active);";
 
                 rol.Id = await _context.QueryFirstOrDefaultAsync<int>(query, new
                 {
                     rol.Name,
-                    rol.code,
-                    IsDeleted = false,
-                    CreateAt = DateTime.UtcNow, // Asigna la fecha actual
-                    DeleteAt = DateTime.UtcNow
+                    code = rol.code ?? "DEFAULT_CODE", // Asegurar que no sea null
+                    CreateAt = DateTime.UtcNow,
+                    DeleteAt = DateTime.UtcNow, // o DateTime.MinValue si lo usas como bandera
+                    Active = true
                 });
 
                 return rol;
@@ -88,11 +88,11 @@ namespace Data
         {
             try
             {
-                string query = @"UPDATE Rol
-                         SET Name = @Name, Code = @Code
-                         WHERE Id = @Id AND IsDeleted = 0;";
+                string query = @"UPDATE RolSet
+                         SET Name = @Name, code = @code
+                         WHERE Id = @Id AND DeleteAt = 0;";
 
-                var parameters = new { Name = rol.Name, Code = rol.code, Id = rol.Id };
+                var parameters = new { Name = rol.Name, code = rol.code, Id = rol.Id };
 
                 using var connection = _context.Database.GetDbConnection();
                 await connection.OpenAsync();
@@ -115,8 +115,8 @@ namespace Data
         {
             try
             {
-                string query = @"UPDATE Rol
-                         SET IsDeleted = 1
+                string query = @"UPDATE RolSet
+                         SET DeleteAt = 1
                          WHERE Id = @Id;";
 
                 using var connection = _context.Database.GetDbConnection();
@@ -137,7 +137,7 @@ namespace Data
         {
             try
             {
-                string query = "DELETE FROM Rol WHERE Id = @Id";
+                string query = "DELETE FROM RolSet WHERE Id = @Id";
                 var parameters = new { Id = id };
 
                 using var connection = _context.Database.GetDbConnection();

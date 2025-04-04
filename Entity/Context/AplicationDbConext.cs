@@ -35,11 +35,10 @@ namespace Entity.Context
         }
 
 
-        ////DbSet
-        ///
-        
+        //DbSet
 
-        DbSet<Rol> Rol { get; set; }
+        public DbSet<Rol> RolSet { get; set; }
+        public DbSet<Persona> PersonaSet { get; set; }
 
         /// <summary>
         /// Configura los modelos de la base de datos aplicando configuraciones desde ensamblados.
@@ -50,7 +49,7 @@ namespace Entity.Context
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
-            base.OnModelCreating(modelBuilder);
+            //base.OnModelCreating(modelBuilder);
         }
 
         /// <summary>
@@ -177,8 +176,6 @@ namespace Entity.Context
             }
         }
 
-        public DbSet<Persona> personas { get; set; }
-        public DbSet<Rol> Rols { get; set; }
        
     }
 }

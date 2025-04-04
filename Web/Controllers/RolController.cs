@@ -39,7 +39,7 @@ namespace Web.Controllers
         {
             try
             {
-                var Rols = await _RolBusiness.GetRolByIdAsync();
+                var Rols = await _RolBusiness.GetRolAllAsync();
                 return Ok(Rols);
             }
             catch (ExternalServiceException ex)
