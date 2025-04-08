@@ -3,6 +3,7 @@ using Entity.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Dapper;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace Data
 {
@@ -20,29 +21,32 @@ namespace Data
         }
         //Método Para traer todo SQL
         public async Task<IEnumerable<Persona>> GetAllPersonasAsync()
-
         {
             try
             {
-                string query = @"SELECT *FROM PersonSet;";
-                return await _context.QueryAsync<Persona>(query);
+                string query = "SELECT * FROM Person;";
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+                return await connection.QueryAsync<Persona>(query);
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener Los Persona {Persona}");
-                throw; 
+                _logger.LogError(ex, "Error al obtener las personas");
+                throw;
             }
         }
 
         ///<param name="module"> Insancia del Persona a crear</param>>
 
         //Método para Obtener por Id Del SQL
-        public async Task<Persona> GetPersonaAsync(int id)
+        public async Task<Persona> GetPersonaIdAsync(int id)
         {
             try
             {
-                String query = @"SELECT * FROM PersonSet;";
-                return await _context.QueryFirstOrDefaultAsync<Persona>(query, new {Id = id});
+                string query = @"SELECT * FROM Person WHERE Id = @Id;";
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<Persona>(query, new { Id = id });
             }
             catch (Exception ex)
             {
@@ -51,21 +55,28 @@ namespace Data
             }
         }
 
+
         //Método para Crear SQL
 
         public async Task<Persona> CreateAsync(Persona persona)
         {
             try
             {
-                string query = @"INSERT INTO PersonSet(Name, Email, PhoneNumber)
-                                OUTPUT INSERTED.Id
-                                VALUES(@Name, @Email, @PhoneNumber);";
-                persona.Id = await _context.QueryFirstOrDefaultAsync<int>(query, new
+                string query = @"INSERT INTO Person (Name, Email, PhoneNumber)
+                         OUTPUT INSERTED.Id
+                         VALUES (@Name, @Email, @PhoneNumber);";
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                var id = await connection.QueryFirstOrDefaultAsync<int>(query, new
                 {
                     persona.Name,
                     persona.Email,
                     persona.PhoneNumber
                 });
+
+                persona.Id = id;
                 return persona;
             }
             catch (Exception ex)
@@ -75,13 +86,14 @@ namespace Data
             }
         }
 
+
         //Método para Actualizar Persona
 
         public async Task<bool> UpdateAsync(Persona persona)
         {
             try
             {
-                string query = @"UPDATE PersonSet
+                string query = @"UPDATE Person
                                 SET Name = @Name, PhoneNumber = @PhoneNumber
                                 WHERE Id = @Id;";
                 var parameters = new { Name = persona.Name, PhoneNumber = persona.PhoneNumber, Id = persona.Id };
@@ -102,12 +114,14 @@ namespace Data
 
         ///<param name="id">Identificador unico del Persona a eliminar.</param>>
 
-        //Método para borrar lógico SQL Data
+        // Método para borrar lógico SQL Data
         public async Task<bool> DeleteLogicAsync(int id)
         {
             try
             {
-                string query = @"UPDATE PersonaSet SET Id = 1 WHERE Id = @Id;";
+                string query = @"UPDATE Persona
+                                 SET DeleteAt = 1
+                                 WHERE Id = @Id;";
 
                 using var connection = _context.Database.GetDbConnection();
                 await connection.OpenAsync();
@@ -117,28 +131,37 @@ namespace Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar lógico la persona: {ex.Message}");
+                Console.WriteLine($"Error al eliminar lógicamente Persona: {ex.Message}");
                 return false;
             }
         }
-        //Método para borrar persistentes SQL
-        public async Task<bool> DeletePersistenteceAsync(int id)
+        // Método para borrar persistentemente SQL usando ID
+        public async Task<bool> DeletePersistenceAsync(int id)
         {
             try
             {
-                string query = "DELETE FROM PersonSet WHERE Id = @Id;";
+                string query = "DELETE FROM Person WHERE Id = @Id";
                 var parameters = new { Id = id };
 
                 using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
 
-                int rowsAffected = await connection.ExecuteAsync(query, new { Id = id });
+                int rowsAffected = await connection.ExecuteAsync(query, parameters);
                 return rowsAffected > 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar persona: {ex.Message}");
+                Console.WriteLine($"Error al eliminar Person: {ex.Message}");
                 return false;
             }
+        }
+        // Sobrecarga para borrar persistentemente usando el objeto Persona
+        public async Task<bool> DeletePersistenceAsync(Persona persona)
+        {
+            if (persona == null)
+                throw new ArgumentNullException(nameof(persona));
+
+            return await DeletePersistenceAsync(persona.Id);
         }
     }
 }

@@ -1,107 +1,138 @@
 ﻿using Entity.Context;
-using Entity.Model;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using MongoDB.Driver.Core.Configuration;
+using Entity.Model;
+using Microsoft.EntityFrameworkCore;
+using Dapper;
+
 namespace Data
 {
     public class UserData
     {
-
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserData> _logger;
-        private readonly string ConnectionString;
 
-
-        ///<param name="conext">Instancia de <see cref="ApplicationDbContext"></param> para la conexion con la base de datos
-        public UserData(ApplicationDbContext context, ILogger<UserData> logger, IConfiguration configuration)
+        public UserData(ApplicationDbContext context, ILogger<UserData> logger)
         {
             _context = context;
             _logger = logger;
-            ConnectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
-
-
-        public async Task<IEnumerable<User>> GetRolsAsync()
-
-        {
-            return await _context.Set<User>().ToListAsync();
-        }
-        public async Task<User> GetRolAsync(int id)
+        // Método para traer todos los usuarios
+        public async Task<IEnumerable<User>> GetAllAsync()
         {
             try
             {
-                return await _context.Set<User>().FindAsync(id);
+                string query = @"SELECT * FROM [User];";
+                return await _context.QueryAsync<User>(query);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener rol con ID {RoId}", id);
-                throw;//Re-lanza la excepcion para qye sea manejada en capas superiores
-            }
-        }
-
-        ///<param name="rol"> Insancia del rol a crear</param>>
-
-
-        public async Task<User> CreateAsync(User user)
-        {
-            try
-            {
-                object value = await _context.Set<User>().AddAsync(user);
-                await _context.SaveChangesAsync();
-                return user;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error al crear rol: {ex.Message}");
+                _logger.LogError(ex, "Error al obtener los usuarios.");
                 throw;
             }
         }
 
-
-        public async Task<bool> ActualizarUser(User User)
-        {
-            using (SqlConnection connection = new SqlConnection(ConnectionString))
-            {
-                await connection.OpenAsync();
-                string query = "UPDATE Users SET UserName = @UserName, ProfilePhotoUrl = @ProfilePhotoUrl WHERE Id = @Id";
-                SqlCommand command = new SqlCommand(query, connection);
-
-                command.Parameters.AddWithValue("@Id", User.Id);
-                command.Parameters.AddWithValue("@UserName", User.UserName);
-                command.Parameters.AddWithValue("@ProfilePhotoUrl", User.ProfilePhotoUrl);
-
-                connection.Open();
-
-                int filasAfectadas = command.ExecuteNonQuery();
-                return filasAfectadas > 0;
-            }
-        }
-
-        ///<param name="id">Identificador unico del rol a eliminar.</param>>
-
-
-        public async Task<bool> DeleteAsync(int id)
+        // Método para obtener un usuario por ID
+        public async Task<User?> GetByIdAsync(int id)
         {
             try
             {
-                var user = await _context.Set<User>().FindAsync(id);
-                if (user == null)
-                    return false;
-
-                _context.Set<User>().Remove(user);
-                await _context.SaveChangesAsync();
-                return true;
+                string query = @"SELECT * FROM [User] WHERE Id = @Id;";
+                return await _context.QueryFirstOrDefaultAsync<User>(query, new { Id = id });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar el rol: {ex.Message}");
+                _logger.LogError(ex, "Error al obtener el usuario con ID {UserId}", id);
+                throw;
+            }
+        }
+
+        // Método para crear un nuevo usuario
+        public async Task<User> CreateAsync(User user)
+        {
+            try
+            {
+                string query = @"
+                    INSERT INTO [User] (UserName, ProfilePhotoUrl, Active) 
+                    OUTPUT INSERTED.Id 
+                    VALUES (@UserName, @ProfilePhotoUrl, @Active);";
+
+                user.Id = await _context.QueryFirstOrDefaultAsync<int>(query, new
+                {
+                    user.UserName,
+                    user.ProfilePhotoUrl,
+                    user.Active
+                });
+
+                return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear el usuario.");
+                throw;
+            }
+        }
+
+        // Método para actualizar un usuario
+        public async Task<bool> UpdateAsync(User user)
+        {
+            try
+            {
+                string query = @"UPDATE [User]
+                                 SET UserName = @UserName,
+                                     ProfilePhotoUrl = @ProfilePhotoUrl,
+                                     Active = @Active
+                                 WHERE Id = @Id;";
+
+                var parameters = new
+                {
+                    user.UserName,
+                    user.ProfilePhotoUrl,
+                    user.Active,
+                    user.Id
+                };
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                int rowsAffected = await connection.ExecuteAsync(query, parameters);
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al actualizar el usuario: {ex.Message}");
                 return false;
             }
         }
+
+        // Método para borrar persistentemente por ID
+        public async Task<bool> DeletePersistenceAsync(int id)
+        {
+            try
+            {
+                string query = "DELETE FROM [User] WHERE Id = @Id;";
+                var parameters = new { Id = id };
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                int rowsAffected = await connection.ExecuteAsync(query, parameters);
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al eliminar usuario: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Sobrecarga para borrar usando objeto User
+        public async Task<bool> DeletePersistenceAsync(User user)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            return await DeletePersistenceAsync(user.Id);
+        }
     }
 }
-

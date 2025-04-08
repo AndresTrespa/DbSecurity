@@ -105,6 +105,59 @@ namespace Business
                 throw new Utilities.Exeptions.ValidationException("Name", "El Name del rol es obligatorio");//trae el newspapers de "BussinesException"
             }
         }
+        // Eliminación física de un rol
+        public async Task DeletePersistenceAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar un rol con ID inválido: {RolId}", id);
+                throw new ValidationException("id", "El ID del rol debe ser mayor que cero");
+            }
+
+            try
+            {
+                var rol = await _rolData.GetByIdAsync(id);
+                if (rol == null)
+                {
+                    _logger.LogInformation("Rol no encontrado con ID: {RolId}", id);
+                    throw new EntityNotFoundException("Rol", id);
+                }
+
+                await _rolData.DeletePersistenceAsync(rol);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar el rol con ID: {RolId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar el rol con ID {id}", ex);
+            }
+        }
+
+        // Eliminación lógica de un rol
+        public async Task DeleteLogicAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar lógicamente un rol con ID inválido: {RolId}", id);
+                throw new ValidationException("id", "El ID del rol debe ser mayor que cero");
+            }
+
+            try
+            {
+                var rol = await _rolData.GetByIdAsync(id);
+                if (rol == null)
+                {
+                    _logger.LogInformation("Rol no encontrado con ID: {RolId}", id);
+                    throw new EntityNotFoundException("Rol", id);
+                }
+                await _rolData.UpdateAsync(rol);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar lógicamente el rol con ID: {RolId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar lógicamente el rol con ID {id}", ex);
+            }
+        }
+
         //Método para mapear de Rol a RolDTO
         private RolDto MapToDTO(Rol rol)
         {

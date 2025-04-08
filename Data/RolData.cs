@@ -8,69 +8,61 @@ namespace Data
 {
     public class RolData
     {
-
         private readonly ApplicationDbContext _context;
         private readonly ILogger<RolData> _logger;
 
-        public RolData (ApplicationDbContext context, ILogger<RolData> logger)
+        public RolData(ApplicationDbContext context, ILogger<RolData> logger)
         {
             _context = context;
             _logger = logger;
         }
 
-
-        //Metodo para traer todo SQL
+        // Método para traer todo SQL
         public async Task<IEnumerable<Rol>> GetAllAsync()
         {
-
             try
             {
-                string query = @"SELECT * FROM RolSet WHERE DeleteAt = 0;";
+                string query = @"SELECT * FROM Rol WHERE DeleteAt = 0;";
                 return await _context.QueryAsync<Rol>(query);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener Los roles {Rol}");
-                throw; // Relanza la excepcion  para q sea manejada por las capas superiores
+                _logger.LogError(ex, "Error al obtener los roles {Rol}");
+                throw;
             }
-
-
         }
 
-
-        //Metodo para traer por id Del SQL
+        // Método para traer por id del SQL
         public async Task<Rol?> GetByIdAsync(int id)
         {
             try
             {
-                string query = @"SELECT * FROM RolSet WHERE Id = @Id;";
+                string query = @"SELECT * FROM Rol WHERE Id = @Id;";
                 return await _context.QueryFirstOrDefaultAsync<Rol>(query, new { Id = id });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener el rol con ID {RolId}", id);
-                throw; // Relanza la excepcion  para q sea manejada por las capas superiores
+                throw;
             }
         }
 
-        ///<param name="rol"> Insancia del rol a crear</param>>
-
-        //método para crear SQL
+        // Método para crear SQL
         public async Task<Rol> CreateAsync(Rol rol)
         {
             try
             {
                 string query = @"
-               INSERT INTO RolSet (Name, code, DeleteAt, CreateAt, Active) 
-               OUTPUT INSERTED.Id 
-               VALUES (@Name, @code, @DeleteAt, @CreateAt,@Active);";
+                    INSERT INTO Rol (Name, code, DeleteAt, CreateAt, Active) 
+                    OUTPUT INSERTED.Id 
+                    VALUES (@Name, @code, @DeleteAt, @CreateAt, @Active);";
 
                 rol.Id = await _context.QueryFirstOrDefaultAsync<int>(query, new
                 {
                     rol.Name,
-                    code = rol.code ?? "DEFAULT_CODE", // Asegurar que no sea null
+                    code = rol.code ?? "DEFAULT_CODE",
                     CreateAt = DateTime.UtcNow,
-                    DeleteAt = DateTime.UtcNow, // o DateTime.MinValue si lo usas como bandera
+                    DeleteAt = DateTime.UtcNow,
                     Active = true
                 });
 
@@ -83,14 +75,14 @@ namespace Data
             }
         }
 
-        //Método para actualizar Rol
+        // Método para actualizar Rol
         public async Task<bool> UpdateAsync(Rol rol)
         {
             try
             {
-                string query = @"UPDATE RolSet
-                         SET Name = @Name, code = @code
-                         WHERE Id = @Id AND DeleteAt = 0;";
+                string query = @"UPDATE Rol
+                                 SET Name = @Name, code = @code
+                                 WHERE Id = @Id AND DeleteAt = 0;";
 
                 var parameters = new { Name = rol.Name, code = rol.code, Id = rol.Id };
 
@@ -107,17 +99,14 @@ namespace Data
             }
         }
 
-
-        ///<param name="id">Identificador unico del rol a eliminar.</param>>
-
-        ///Método para borrar lógico SQL Data///
+        // Método para borrar lógico SQL Data
         public async Task<bool> DeleteLogicAsync(int id)
         {
             try
             {
-                string query = @"UPDATE RolSet
-                         SET DeleteAt = 1
-                         WHERE Id = @Id;";
+                string query = @"UPDATE Rol
+                                 SET DeleteAt = 1
+                                 WHERE Id = @Id;";
 
                 using var connection = _context.Database.GetDbConnection();
                 await connection.OpenAsync();
@@ -132,19 +121,18 @@ namespace Data
             }
         }
 
-        ///Método para borrar persistentes SQL
+        // Método para borrar persistentemente SQL usando ID
         public async Task<bool> DeletePersistenceAsync(int id)
         {
             try
             {
-                string query = "DELETE FROM RolSet WHERE Id = @Id";
+                string query = "DELETE FROM Rol WHERE Id = @Id";
                 var parameters = new { Id = id };
 
                 using var connection = _context.Database.GetDbConnection();
-                await connection.OpenAsync(); // Asegurar que la conexión esté abierta
+                await connection.OpenAsync();
 
                 int rowsAffected = await connection.ExecuteAsync(query, parameters);
-
                 return rowsAffected > 0;
             }
             catch (Exception ex)
@@ -152,6 +140,15 @@ namespace Data
                 Console.WriteLine($"Error al eliminar rol: {ex.Message}");
                 return false;
             }
+        }
+
+        // Sobrecarga para borrar persistentemente usando el objeto Rol
+        public async Task<bool> DeletePersistenceAsync(Rol rol)
+        {
+            if (rol == null)
+                throw new ArgumentNullException(nameof(rol));
+
+            return await DeletePersistenceAsync(rol.Id);
         }
     }
 }

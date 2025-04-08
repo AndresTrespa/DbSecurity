@@ -7,13 +7,11 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-using System;
-using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
-
 namespace Diagram
 {
-    
+    using System;
+    using System.Data.Entity;
+    using System.Data.Entity.Infrastructure;
     
     public partial class Model1Container : DbContext
     {

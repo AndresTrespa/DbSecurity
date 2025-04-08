@@ -15,7 +15,7 @@ namespace Business
             _personaData = personaData;
             _logger = logger;
         }
-        public async Task<IEnumerable<PersonDTO>> GetPersonaAsync()
+        public async Task<IEnumerable<PersonDTO>> GetAllPersonasAsync()
         {
             try
             {
@@ -30,7 +30,7 @@ namespace Business
             }
         }
 
-        public async Task<PersonDTO> GetAllPersonasAsync(int id)
+        public async Task<PersonDTO> GetPersonaByIdAsync(int id)
         {
             if (id <= 0)
             {
@@ -39,7 +39,7 @@ namespace Business
             }
             try
             {
-                var persona = await _personaData.GetPersonaAsync(id);
+                var persona = await _personaData.GetPersonaIdAsync(id);
                 if (persona == null)
                 {
                     _logger.LogInformation("No se encontró ningún persona con ID: {PersonaId}", id);
@@ -62,18 +62,17 @@ namespace Business
         }
 
         // Método para crear un persona desde un DTO
-        public async Task<PersonDTO> CreatePersonAsync(PersonDTO PersonDTO)
+        public async Task<PersonDTO> CreatePersonAsync(PersonDTO personDTO)
         {
             try
             {
-                ValidatePersona(PersonDTO);
+                ValidatePersona(personDTO);
 
-                var persona = new Persona 
+                var persona = new Persona
                 {
-                    Name = PersonDTO.Name,
-                    Email = PersonDTO.Email, // Si existe en la entidad
-                    PhoneNumber = PersonDTO.PhoneNumber,
-
+                    Name = personDTO.Name,
+                    Email = personDTO.Email,
+                    PhoneNumber = personDTO.PhoneNumber
                 };
 
                 var personaCreado = await _personaData.CreateAsync(persona);
@@ -82,29 +81,93 @@ namespace Business
                 {
                     Id = personaCreado.Id,
                     Name = personaCreado.Name,
-                    Email = personaCreado.Email, // Si existe en la entidad
+                    Email = personaCreado.Email,
                     PhoneNumber = personaCreado.PhoneNumber
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear nuevo Persona: {PersonaNombre}", PersonDTO?.Name ?? "null");
+                _logger.LogError(ex, "Error al crear nuevo Persona: {PersonaNombre}", personDTO?.Name ?? "null");
                 throw new ExternalServiceException("Base de datos", "Error al crear el Persona", ex);
             }
         }
 
-        // Método para validar el DTO
-        private void ValidatePersona(PersonDTO PersonaDto)
-        {
-            if (PersonaDto == null)
-            {
-                throw new Utilities.Exeptions.ValidationException("El objeto persona no puede ser nulo");
-            }
 
-            if (string.IsNullOrWhiteSpace(PersonaDto.Name))
+
+        // Método para validar el DTO
+        private void ValidatePersona(PersonDTO personaDto)
+        {
+            if (personaDto == null)
+                throw new ValidationException("El objeto persona no puede ser nulo");
+
+            if (string.IsNullOrWhiteSpace(personaDto.Name))
             {
                 _logger.LogWarning("Se intentó crear/actualizar un Persona con Name vacío");
-                throw new Utilities.Exeptions.ValidationException("Name", "El Name de persona es obligatorio");//trae el newspapers de "BussinesException"
+                throw new ValidationException("Name", "El nombre de la persona es obligatorio");
+            }
+
+            if (string.IsNullOrWhiteSpace(personaDto.Email))
+            {
+                _logger.LogWarning("Se intentó crear/actualizar un Persona con Email vacío");
+                throw new ValidationException("Email", "El email de la persona es obligatorio");
+            }
+
+            if (string.IsNullOrWhiteSpace(personaDto.PhoneNumber))
+            {
+                _logger.LogWarning("Se intentó crear/actualizar un Persona con número vacío");
+                throw new ValidationException("PhoneNumber", "El número de teléfono es obligatorio");
+            }
+        }
+        // Eliminación física de un rol
+        public async Task DeletePersistenceAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar un rol con ID inválido: {RolId}", id);
+                throw new ValidationException("id", "El ID del rol debe ser mayor que cero");
+            }
+
+            try
+            {
+                var rol = await _personaData.GetPersonaIdAsync(id);
+                if (rol == null)
+                {
+                    _logger.LogInformation("Rol no encontrado con ID: {RolId}", id);
+                    throw new EntityNotFoundException("Rol", id);
+                }
+
+                await _personaData.DeletePersistenceAsync(rol);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar el rol con ID: {RolId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar el rol con ID {id}", ex);
+            }
+        }
+
+        // Eliminación lógica de un rol
+        public async Task DeleteLogicAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar lógicamente un rol con ID inválido: {RolId}", id);
+                throw new ValidationException("id", "El ID del rol debe ser mayor que cero");
+            }
+
+            try
+            {
+                var rol = await _personaData.GetPersonaIdAsync(id);
+                if (rol == null)
+                {
+                    _logger.LogInformation("Rol no encontrado con ID: {RolId}", id);
+                    throw new EntityNotFoundException("Rol", id);
+                }
+                await _personaData.UpdateAsync(rol);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar lógicamente el rol con ID: {RolId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar lógicamente el rol con ID {id}", ex);
             }
         }
         //Método para mapear de Persona a PersonaDto

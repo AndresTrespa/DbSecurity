@@ -1,4 +1,5 @@
-﻿using Entity.Context;
+﻿using Dapper;
+using Entity.Context;
 using Entity.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,80 +19,143 @@ namespace Data
             _logger = logger;
         }
 
-
+        //Método Para traer todo SQL
 
         public async Task<IEnumerable<Module>> GetAllModulesAsync()
 
         {
-            return await _context.Set<Module>().ToListAsync();
-        }
-        public async Task<Module> GetbyIdAsync(int id)
-        {
             try
             {
-                return await _context.Set<Module>().FindAsync(id);
+                string query = "SELECT * FROM Module;";
+
+                using var connection = _context.Database.GetDbConnection();
+
+                await connection.OpenAsync();
+                return await connection.QueryAsync<Module>(query);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener rol con ID {RoId}", id);
-                throw;//Re-lanza la excepcion para que sea manejada en capas superiores
+                _logger.LogError(ex, "Error al obtener las Module");
+                throw;
             }
         }
+        //Método para Obtener por Id Del SQL
 
-        ///<param name="module"> Insancia del rol a crear</param>>
-
-
-        public async Task<Module> CreateModuleAsync(Module module)
+        public async Task<Module> GetByIdAsync(int id)
         {
             try
             {
-                object value = await _context.Set<Module>().AddAsync(module);
-                await _context.SaveChangesAsync();
-                return module;
+                const string query = "SELECT * FROM Module WHERE Id = @Id;";
+                using var connection = _context.Database.GetDbConnection();
+
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<Module>(query, new { Id = id });
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error al crear rol: {ex.Message}");
+                _logger.LogError($"Error al obtener permiso: {ex.Message}");
+                throw;
+            }
+        }
+        ///<param name="module"> Insancia de Module a crear</param>>  
+
+
+        public async Task<Module> CreateAsync(Module Module)
+        {
+            try
+            {
+                const string query = @"
+                INSERT INTO Module (Name, Description)
+                OUTPUT INSERTED.Id
+                VALUES (@Name, @Description);";
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                Module.Id = await connection.QuerySingleAsync<int>(query, new
+                {
+                    Module.Name,
+                    Module.Description
+                });
+
+                return Module;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al crear Module: {ex.Message}");
                 throw;
             }
         }
 
-
-        public async Task<bool> UpdateAsync(Module module)
+        public async Task<bool> UpdateAsync(Module Module)
         {
             try
             {
-                _context.Set<Module>().Update(module);
-                await _context.SaveChangesAsync();
-                return true;
+                string query = @"
+                UPDATE Module 
+                SET Name = @Name, Description = @Description
+                WHERE Id = @Id;";
+
+                var parameters = new { Name = Module.Name, Description = Module.Description, Id = Module.Id };
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                int rowsAffected = await connection.ExecuteAsync(query, parameters);
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error al actualizar el rol: {ex.Message}");
+                _logger.LogError($"Error al actualizar la permiso: {ex.Message}");
                 return false;
             }
         }
 
         ///<param name="id">Identificador unico del rol a eliminar.</param>>
 
-
-        public async Task<bool> DeleteAsync(int id)
+        //Método para borrar lógico SQL Data
+        public async Task<bool> DeleteLogicAsync(int id)
         {
             try
             {
-                var module = await _context.Set<Module>().FindAsync(id);
-                if (module == null)
-                    return false;
+                string query = "UPDATE Module SET Deleted = 1 WHERE Id = @Id;";
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
 
-                _context.Set<Module>().Remove(module);
-                await _context.SaveChangesAsync();
-                return true;
+                int rowsAffected = await connection.ExecuteAsync(query, new { Id = id });
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar el rol: {ex.Message}");
+                Console.WriteLine($"Error al eliminar lógico el Module: {ex.Message}");
                 return false;
             }
+        }
+        //Método para borrar persistentes SQL
+        public async Task<bool> DeletePersistenceAsync(int id)
+        {
+            try
+            {
+                string query = "DELETE FROM Module WHERE Id = @Id;";
+                var parameters = new { Id = id };
+
+                using var connection = _context.Database.GetDbConnection();
+
+                int rowsAffected = await connection.ExecuteAsync(query, new { Id = id });
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al eliminar Module: {ex.Message}");
+                return false;
+            }
+        }
+        public async Task<bool> DeletePersistenceAsync(Module Module)
+        {
+            if (Module == null)
+                throw new ArgumentNullException(nameof(Module));
+
+            return await DeletePersistenceAsync(Module.Id);
         }
     }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Entity.Model
+﻿namespace Entity.Model
 {
     public class RolFormPermission
     {
@@ -12,8 +6,8 @@ namespace Entity.Model
         public int FormId { get; set; }
         public int PermissionId { get; set; }
         public int RolId { get; set; }
-        public virtual Rol Rol { get; set; }
-        public virtual Form Form { get; set; }
-        public virtual Permission Permission { get; set; }
+        public Rol Rol { get; set; }
+        public Form Form { get; set; }
+        public Permission Permission { get; set; }
     }
 }

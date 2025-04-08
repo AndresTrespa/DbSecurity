@@ -1,4 +1,4 @@
-﻿// T4 code generation is enabled for model 'C:\Users\AdminSena\Desktop\DbPATH\Diagram\Model1.edmx'. 
+﻿// T4 code generation is enabled for model 'C:\Users\JAIR TRESPALACIOS\OneDrive\Escritorio\DbSecurity\Diagram\Model1.edmx'. 
 // To enable legacy code generation, change the value of the 'Code Generation Strategy' designer
 // property to 'Legacy ObjectContext'. This property is available in the Properties Window when the model
 // is open in the designer.

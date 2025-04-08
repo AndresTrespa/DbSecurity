@@ -6,52 +6,44 @@ using Utilities.Exeptions;
 
 namespace Business
 {
-    class ModuleBusiness
+    public class ModuleBusiness
     {
         private readonly ModuleData _modelData;
-        private readonly ILogger _logger;
-        public ModuleBusiness(ModuleData modeldata, ILogger logger)
+        private readonly ILogger<ModuleBusiness> _logger;
+        public ModuleBusiness(ModuleData modeldata, ILogger<ModuleBusiness> logger)
         {
             _modelData = modeldata;
             _logger = logger;
         }
-        public async Task<IEnumerable<ModuleDto>> GetAllModuleAsync()
+        public async Task<IEnumerable<ModuleDto>> GetAllModule()
         {
             try
             {
                 var modules = await _modelData.GetAllModulesAsync();
-                var ModuleDto = new List<ModuleDto>();
-
-                foreach (var module in modules)
-                    ModuleDto.Add(new ModuleDto
-                    {
-                        Id = module.Id,
-                        Name = module.Name,
-                        Description = module.Description
-                    });
-                return ModuleDto;
+                var moduleDto = MapToList(modules);
+                return moduleDto;
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener todos los roles");
-                throw new ExternalServiceException("Base de datos", "Error al recuperar la lista de roles", ex);
+                _logger.LogError(ex, "Error al obtener todos los module");
+                throw new ExternalServiceException("Base de datos", "Error al recuperar la lista de module", ex);
             }
-        }
 
-        public async Task<ModuleDto> GetAllModulesAsync(int id)
+        }
+        public async Task<ModuleDto> GetModuleById(int id)
         {
             if (id <= 0)
             {
-                _logger.LogWarning("Se intentó obtener un module con ID inválido: {ModelId}", id);
-                throw new Utilities.Exeptions.ValidationException("id", "El ID del module debe ser mayor que cero");
+                _logger.LogWarning("Se intentó obtener un module con ID inválido: {moduleId}", id);
+                throw new ValidationException("id", "El ID del module debe ser mayor que cero");
             }
 
             try
             {
-                var module = await _modelData.GetbyIdAsync(id);
+                var module = await _modelData.GetByIdAsync(id);
                 if (module == null)
                 {
-                    _logger.LogInformation("No se encontró ningún Module con ID: {ModuleId}", id);
+                    _logger.LogInformation("module no encontrado con ID: {moduleId}", id);
                     throw new EntityNotFoundException("Module", id);
                 }
 
@@ -64,65 +56,115 @@ namespace Business
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener el module con ID: {moduleId}", id);
-                throw new ExternalServiceException("Base de datos", $"Error al recuperar el rol con ID {id}", ex);
+                _logger.LogError(ex, "Error al obtener el Module con ID: {ModuleId}", id);
+                throw new ExternalServiceException("Base de datos", "Error al recuperar el module", ex);
             }
         }
 
-        // Método para crear un module desde un DTO
-        public async Task<ModuleDto> CreateModuleAsync(ModuleDto ModuleDto)
+        public async Task<ModuleDto> CreateModule(ModuleDto moduleDto)
         {
             try
             {
-                ValidateModule(ModuleDto);
+                ValidateModule(moduleDto);
 
-                var module = new Module
+                var Module = new Module
                 {
-                    Name = ModuleDto.Name,
-                    Description = ModuleDto.Description // Si existe en la entidad
+                    Name = moduleDto.Name,
+                    Description = moduleDto.Description
                 };
 
-                var moduleCreado = await _modelData.CreateModuleAsync(module);
+                var ModuleCreado = await _modelData.CreateAsync(Module);
 
                 return new ModuleDto
                 {
-                    Id = moduleCreado.Id,
-                    Name = moduleCreado.Name,
-                    Description = moduleCreado.Description // Si existe en la entidad
+                    Id = ModuleCreado.Id,
+                    Name = ModuleCreado.Name,
+                    Description = ModuleCreado.Description
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear nuevo rol: {RolNombre}", ModuleDto?.Name ?? "null");
-                throw new ExternalServiceException("Base de datos", "Error al crear el rol", ex);
+                _logger.LogError(ex, "Error al crear Module: {ModuleName}", moduleDto?.Name ?? "Null");
+                throw new ExternalServiceException("Base de datos", "Error al crear el Module", ex);
             }
         }
 
-        // Método para validar el DTO
-        private void ValidateModule(ModuleDto ModuleDto)
+        private void ValidateModule(ModuleDto moduleDto)
         {
-            if (ModuleDto == null)
+            if (moduleDto == null)
             {
-                throw new Utilities.Exeptions.ValidationException("El objeto module no puede ser nulo");
+                throw new ValidationException("El objeto Module no puede ser nulo");
             }
 
-            if (string.IsNullOrWhiteSpace(ModuleDto.Name))
+            if (string.IsNullOrWhiteSpace(moduleDto.Name))
             {
-                _logger.LogWarning("Se intentó crear/actualizar un module con Name vacío");
-                throw new Utilities.Exeptions.ValidationException("Name", "El Name del rol es obligatorio");//trae el newspapers de "BussinesException"
+                _logger.LogWarning("Se intentó crear/actualizar un Module con Name vacío");
+                throw new ValidationException("Name del Module es obligatorio");
             }
         }
-        //Método para mapear de module a ModuleDto
+
+        // Eliminación física de un Module
+        public async Task DeletePersistenceAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar un Module con ID inválido: {ModuleId}", id);
+                throw new ValidationException("id", "El ID del Module debe ser mayor que cero");
+            }
+            try
+            {
+                var Module = await _modelData.GetByIdAsync(id);
+                if (Module == null)
+                {
+                    _logger.LogInformation("Module no encontrado con ID: {ModuleId}", id);
+                    throw new EntityNotFoundException("Module", id);
+                }
+
+                await _modelData.DeletePersistenceAsync(Module);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar el Module con ID: {ModuleId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar el Module con ID {id}", ex);
+            }
+        }
+        // Eliminación lógica de un Module
+        public async Task DeleteLogicAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar lógicamente un Module con ID inválido: {ModuleId}", id);
+                throw new ValidationException("id", "El ID del Module debe ser mayor que cero");
+            }
+
+            try
+            {
+                var Module = await _modelData.GetByIdAsync(id);
+                if (Module == null)
+                {
+                    _logger.LogInformation("Module no encontrado con ID: {ModuleId}", id);
+                    throw new EntityNotFoundException("Module", id);
+                }
+
+                await _modelData.UpdateAsync(Module);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar lógicamente el Module con ID: {ModuleId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar lógicamente el Module con ID {id}", ex);
+            }
+        }
+
         private ModuleDto MapToDTO(Module module)
         {
             return new ModuleDto
             {
                 Id = module.Id,
                 Name = module.Name,
-                Description = module.Description //si existe la entidad
+                Description = module.Description
             };
         }
-        //Método para mapear de ModuleDto a Module
+
         private Module MapToEntity(ModuleDto moduleDto)
         {
             return new Module
@@ -132,15 +174,15 @@ namespace Business
                 Description = moduleDto.Description
             };
         }
-        //Método para mapear una lista de Module a una lista de RolDTO
+
         private IEnumerable<ModuleDto> MapToList(IEnumerable<Module> modules)
         {
-            var ModuleDTO = new List<ModuleDto>();
-            foreach (var module in modules)
+            var ModulesDTO = new List<ModuleDto>();
+            foreach (var Module in modules)
             {
-                ModuleDTO.Add(MapToDTO(module));
+                ModulesDTO.Add(MapToDTO(Module));
             }
-            return ModuleDTO;
+            return ModulesDTO;
         }
     }
 }

@@ -21,17 +21,8 @@ namespace Business
             try
             {
                 var forms = await _formData.GetAllAsync();
-                var formsDTO = new List<FormDto>();
+                var formsDTO = MapToList(forms);
 
-                foreach (var form in forms)
-                {
-                    formsDTO.Add(new FormDto
-                    {
-                        Id = form.Id,
-                        Name = form.Name,
-                        Description = form.Description
-                    });
-                }
                 return formsDTO;
             }
             catch (Exception ex)
@@ -49,7 +40,7 @@ namespace Business
             }
             try
             {
-                var form = await _formData.GetbyIdAsync(id);
+                var form = await _formData.GetByIdAsync(id);
                 if (form == null)
                 {
                     _logger.LogInformation("Se intentó obtener un rol con ID inválido: {Form}", id);
@@ -97,12 +88,63 @@ namespace Business
         {
             if (FormDto == null)
             {
-                throw new Utilities.Exeptions.ValidationException("El objeto form no puede ser nulo");
+                throw new ValidationException("El objeto form no puede ser nulo");
             }
             if (string.IsNullOrWhiteSpace(FormDto.Name))
             {
                 _logger.LogWarning("Se intentó crear/actualizar un form con Name vacío");
-                throw new Utilities.Exeptions.ValidationException("Name del form es obligatorio");
+                throw new ValidationException("Name del form es obligatorio");
+            }
+        }
+        // Eliminación física de un form
+        public async Task DeletePersistenceAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar un form con ID inválido: {formId}", id);
+                throw new ValidationException("id", "El ID del form debe ser mayor que cero");
+            }
+            try
+            {
+                var form = await _formData.GetByIdAsync(id);
+                if (form == null)
+                {
+                    _logger.LogInformation("form no encontrado con ID: {formId}", id);
+                    throw new EntityNotFoundException("form", id);
+                }
+
+                await _formData.DeletePersistenceAsync(form);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar el form con ID: {formId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar el form con ID {id}", ex);
+            }
+        }
+        // Eliminación lógica de un form
+        public async Task DeleteLogicAsync(int id)
+        {
+            if (id <= 0)
+            {
+                _logger.LogWarning("Se intentó eliminar lógicamente un form con ID inválido: {formId}", id);
+                throw new ValidationException("id", "El ID del form debe ser mayor que cero");
+            }
+
+            try
+            {
+                var form = await _formData.GetByIdAsync(id);
+                if (form == null)
+                {
+                    _logger.LogInformation("form no encontrado con ID: {formId}", id);
+                    throw new EntityNotFoundException("form", id);
+                }
+
+                await _formData.UpdateAsync(form);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar lógicamente el form con ID: {formId}", id);
+                throw new ExternalServiceException("Base de datos", $"Error al eliminar lógicamente el form con ID {id}", ex);
             }
         }
         private FormDto MapToDTO(Form form)
@@ -111,7 +153,18 @@ namespace Business
             {
                 Id = form.Id,
                 Name = form.Name,
-                Description = form.Description
+                Description = form.Description,
+                Url = form.Url
+            };
+        }
+        private Form MapToEntity(FormDto formDto)
+        {
+            return new Form
+            {
+                Id = formDto.Id,
+                Name = formDto.Name,
+                Description = formDto.Description,
+                Url = formDto.Url
             };
         }
         private IEnumerable<FormDto> MapToList(IEnumerable<Form> forms)

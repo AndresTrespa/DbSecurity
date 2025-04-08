@@ -1,4 +1,4 @@
-﻿
+﻿using Dapper;
 using Entity.Context;
 using Entity.Model;
 using Microsoft.EntityFrameworkCore;
@@ -20,79 +20,147 @@ namespace Data
         }
 
 
-
+        //Método Para traer todo SQL
         public async Task<IEnumerable<Form>> GetAllAsync()
-
-        {
-            return await _context.Set<Form>().ToListAsync();
-        }
-        public async Task<Form> GetbyIdAsync(int id)
         {
             try
             {
-                 return await _context.Set<Form>().FindAsync(id);
+                string query = "SELECT * FROM Form;";
+
+                using var connection = _context.Database.GetDbConnection();
+
+                await connection.OpenAsync();
+                return await connection.QueryAsync<Form>(query);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener rol con ID {RoId}", id);
-                throw;//Re-lanza la excepcion para qye sea manejada en capas superiores
+                _logger.LogError(ex, "Error al obtener las Form");
+                throw;
+            }
+        }
+        //Método para Obtener por Id Del SQL
+
+        public async Task<Form> GetByIdAsync(int id)
+        {
+            try
+            {
+                const string query = "SELECT * FROM Form WHERE Id = @Id;";
+                using var connection = _context.Database.GetDbConnection();
+
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<Form>(query, new { Id = id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al obtener permiso: {ex.Message}");
+                throw;
             }
         }
 
         ///<param name="form"> Insancia del rol a crear</param>>
 
-
-        public async Task<Form> CreateAsync(Form form)
+                //Método para Crear SQL
+        public async Task<Form> CreateAsync(Form Form)
         {
             try
             {
-                object value = await _context.Set<Form>().AddAsync(form);
-                await _context.SaveChangesAsync();
-                return form;
+                const string query = @"
+                INSERT INTO Form (Name, Description)
+                OUTPUT INSERTED.Id
+                VALUES (@Name, @Description);";
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                var id = await connection.QuerySingleAsync<int>(query, new
+                {
+                    Form.Name,
+                    Form.Description
+                });
+
+                Form.Id = id;
+                return Form;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error al crear rol: {ex.Message}");
+                _logger.LogError($"Error al crear Form: {ex.Message}");
                 throw;
             }
         }
 
-
-        public async Task<bool> UpdateAsync(Form form)
+        //Método para Actualizar
+        public async Task<bool> UpdateAsync(Form Form)
         {
             try
             {
-                _context.Set<Form>().Update(form);
-                await _context.SaveChangesAsync();
-                return true;
+                string query = @"
+                UPDATE Permission 
+                SET Name = @Name, Description = @Description
+                WHERE Id = @Id;";
+
+                var parameters = new { Name = Form.Name, Description = Form.Description, Id = Form.Id };
+
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                int rowsAffected = await connection.ExecuteAsync(query, parameters);
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error al actualizar el rol: {ex.Message}");
+                _logger.LogError($"Error al actualizar la permiso: {ex.Message}");
                 return false;
             }
         }
 
         ///<param name="id">Identificador unico del rol a eliminar.</param>>
 
-
-        public async Task<bool> DeleteAsync(int id)
+        /////Método para borrar lógico SQL Data
+        public async Task<bool> DeleteLogicAsync(int id)
         {
             try
             {
-                var form = await _context.Set<Form>().FindAsync(id);
-                if (form == null)
-                    return false;
+                string query = "UPDATE Form SET Deleted = 1 WHERE Id = @Id;";
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
 
-                _context.Set<Form>().Remove(form);
-                await _context.SaveChangesAsync();
-                return true;
+                int rowsAffected = await connection.ExecuteAsync(query, new { Id = id });
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar el rol: {ex.Message}");
+                Console.WriteLine($"Error al eliminar lógico el permiso: {ex.Message}");
                 return false;
             }
         }
+
+        //Método para borrar persistentes SQL
+
+        public async Task<bool> DeletePersistenceAsync(int id)
+        {
+            try
+            {
+                string query = "DELETE FROM Form WHERE Id = @Id;";
+                var parameters = new { Id = id };
+
+                using var connection = _context.Database.GetDbConnection();
+
+                int rowsAffected = await connection.ExecuteAsync(query, new { Id = id });
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al eliminar Form: {ex.Message}");
+                return false;
+            }
+        }
+        public async Task<bool> DeletePersistenceAsync(Form Form)
+        {
+            if (Form == null)
+                throw new ArgumentNullException(nameof(Form));
+
+            return await DeletePersistenceAsync(Form.Id);
+        }
     }
 }
+

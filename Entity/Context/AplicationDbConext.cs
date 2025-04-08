@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.Storage;
 using Entity.Model;
+using Module = Entity.Model.Module;
+using System.Data.Common;
 
 namespace Entity.Context
 {
@@ -35,10 +37,24 @@ namespace Entity.Context
         }
 
 
-        //DbSet
+        //se establecen los Dbset
 
-        public DbSet<Rol> RolSet { get; set; }
-        public DbSet<Persona> PersonaSet { get; set; }
+        public DbSet<Rol> Rol { get; set; }
+        public DbSet<Persona> Persona { get; set; }
+        public DbSet<Permission> Permission { get; set; }
+        public DbSet<Form> Form { get; set; }
+        public DbSet<Module> Module { get; set; }    
+        public DbSet<RolFormPermission> RolFormPermission { get; set; }
+        public DbSet<RolUser> RolUser { get; set; }
+        public DbSet<User> User { get; set; }
+        public DbSet<FormModule> FormModule { get; set; }
+        public DbSet<Review> Review { get; set; }
+        public DbSet<Consumer> Consumer { get; set; }
+        public DbSet<Producer> Producer { get; set; }
+        public DbSet<Product> Product { get; set; }
+        public DbSet<Category> Category { get; set; }
+        public DbSet<Favorite> Favorite { get; set; }
+        public DbSet<Order> Order { get; set; } 
 
         /// <summary>
         /// Configura los modelos de la base de datos aplicando configuraciones desde ensamblados.
